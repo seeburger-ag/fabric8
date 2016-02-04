@@ -19,8 +19,11 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.recipes.cache.TreeCache;
+import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
+import org.apache.curator.framework.recipes.cache.TreeCacheListener;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+
 import io.fabric8.dosgi.api.Dispatched;
 import io.fabric8.dosgi.api.SerializationStrategy;
 import io.fabric8.dosgi.capset.CapabilitySet;
@@ -32,6 +35,7 @@ import io.fabric8.dosgi.tcp.ServerInvokerImpl;
 import io.fabric8.dosgi.util.AriesFrameworkUtil;
 import io.fabric8.dosgi.util.Utils;
 import io.fabric8.dosgi.util.UuidGenerator;
+
 import org.fusesource.hawtdispatch.Dispatch;
 import org.fusesource.hawtdispatch.DispatchQueue;
 import org.osgi.framework.Bundle;
@@ -66,8 +70,8 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import static io.fabric8.zookeeper.utils.ZooKeeperUtils.create;
-import static io.fabric8.zookeeper.utils.ZooKeeperUtils.delete;
+import static io.fabric8.dosgi.util.ZooKeeperUtils.create;
+import static io.fabric8.dosgi.util.ZooKeeperUtils.delete;
 import static org.osgi.service.remoteserviceadmin.RemoteConstants.ENDPOINT_FRAMEWORK_UUID;
 import static org.osgi.service.remoteserviceadmin.RemoteConstants.ENDPOINT_ID;
 import static org.osgi.service.remoteserviceadmin.RemoteConstants.SERVICE_EXPORTED_CONFIGS;
@@ -76,7 +80,7 @@ import static org.osgi.service.remoteserviceadmin.RemoteConstants.SERVICE_EXPORT
 import static org.osgi.service.remoteserviceadmin.RemoteConstants.SERVICE_IMPORTED;
 import static org.osgi.service.remoteserviceadmin.RemoteConstants.SERVICE_IMPORTED_CONFIGS;
 
-public class Manager implements ServiceListener, ListenerHook, EventHook, FindHook, PathChildrenCacheListener, Dispatched {
+public class Manager implements ServiceListener, ListenerHook, EventHook, FindHook, TreeCacheListener, Dispatched {
 
     public static final String CONFIG = "fabric-dosgi";
 
@@ -156,7 +160,7 @@ public class Manager implements ServiceListener, ListenerHook, EventHook, FindHo
         } catch (KeeperException.NodeExistsException e) {
             // The node already exists, that's fine
         }
-        this.tree = new TreeCache(curator,  DOSGI_REGISTRY, true);
+        this.tree = new TreeCache(curator,  DOSGI_REGISTRY);
         this.tree.getListenable().addListener(this);
         this.tree.start();
         // UUID
@@ -421,11 +425,11 @@ public class Manager implements ServiceListener, ListenerHook, EventHook, FindHo
     public DispatchQueue queue() {
         return queue;
     }
-
+    
     @Override
-    public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent event) throws Exception {
+    public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent event) throws Exception {
         switch (event.getType()) {
-            case CHILD_ADDED: {
+            case NODE_ADDED: {
 
                 EndpointDescription endpoint = Utils.getEndpointDescription(new String(event.getData().getData()));
                 remoteEndpoints.addCapability(endpoint);
@@ -437,7 +441,7 @@ public class Manager implements ServiceListener, ListenerHook, EventHook, FindHo
                 }
             }
             break;
-            case CHILD_UPDATED: {
+            case NODE_UPDATED: {
                 EndpointDescription endpoint = Utils.getEndpointDescription(new String(event.getData().getData()));
                 Map<Long, ImportRegistration> registrations = importedServices.get(endpoint);
                 if (registrations != null) {
@@ -447,7 +451,7 @@ public class Manager implements ServiceListener, ListenerHook, EventHook, FindHo
                 }
             }
             break;
-            case CHILD_REMOVED: {
+            case NODE_REMOVED: {
                 EndpointDescription endpoint = Utils.getEndpointDescription(new String(event.getData().getData()));
                 remoteEndpoints.removeCapability(endpoint);
                 Map<Long, ImportRegistration> registrations = importedServices.remove(endpoint);
