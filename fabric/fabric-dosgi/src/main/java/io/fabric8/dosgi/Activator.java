@@ -16,15 +16,26 @@
 package io.fabric8.dosgi;
 
 import java.io.IOException;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.curator.framework.state.ConnectionStateListener;
-import io.fabric8.dosgi.impl.Manager;
-import org.osgi.framework.BundleContext;
+import org.apache.curator.retry.RetryNTimes;
+import org.apache.zookeeper.server.ZooKeeperServer;
 
-public class Activator implements ConnectionStateListener {
+import io.fabric8.dosgi.impl.Manager;
+import io.fabric8.dosgi.util.ZookeeperBootstrap;
+
+import org.osgi.framework.BundleActivator;
+import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class Activator implements ConnectionStateListener, BundleActivator {
 
     private BundleContext bundleContext;
     private Manager manager;
@@ -32,6 +43,8 @@ public class Activator implements ConnectionStateListener {
     private String exportedAddress;
     private long timeout = TimeUnit.MINUTES.toMillis(5);
     private CuratorFramework curator;
+	private ZooKeeperServer server;
+	private static final Logger LOG = LoggerFactory.getLogger(Activator.class);
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -80,6 +93,7 @@ public class Activator implements ConnectionStateListener {
     }
 
     public void onConnected() {
+    	LOG.info("Received connect");
         destroyManager();
         try {
             manager = new Manager(this.bundleContext, curator, uri, exportedAddress, timeout);
@@ -90,6 +104,32 @@ public class Activator implements ConnectionStateListener {
     }
 
     public void onDisconnected() {
+    	LOG.info("Received disconnect");
         destroyManager();
     }
+
+	@Override
+	public void start(BundleContext context) throws Exception {
+		setBundleContext(context);
+		int serverPort = 2555;//new Random().nextInt(50000)+1024;
+		setUri("tcp://0.0.0.0:"+serverPort);
+		
+		try {
+			server = new ZookeeperBootstrap().activate(serverPort, serverPort+1);
+			
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		CuratorFramework client = CuratorFrameworkFactory.newClient(uri, new RetryNTimes(100, 100));
+		client.getConnectionStateListenable().addListener(this);
+		
+	}
+
+	@Override
+	public void stop(BundleContext context) throws Exception {
+		onDisconnected();
+		if(server!=null)
+			server.shutdown();
+	}
 }
