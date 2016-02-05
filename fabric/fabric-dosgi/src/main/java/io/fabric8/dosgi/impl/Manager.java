@@ -191,7 +191,10 @@ public class Manager implements ServiceListener, ListenerHook, EventHook, FindHo
         }
         this.server.stop();
         this.client.stop();
-        this.tree.close();
+        if(tree!=null)
+        {
+            this.tree.close();
+        }
         if (registration != null) {
             this.registration.unregister();
         }
@@ -425,43 +428,63 @@ public class Manager implements ServiceListener, ListenerHook, EventHook, FindHo
     public DispatchQueue queue() {
         return queue;
     }
-    
-    @Override
-    public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent event) throws Exception {
-        switch (event.getType()) {
-            case NODE_ADDED: {
 
-                EndpointDescription endpoint = Utils.getEndpointDescription(new String(event.getData().getData()));
-                remoteEndpoints.addCapability(endpoint);
-                // Check existing listeners
-                for (Map.Entry<ListenerInfo, SimpleFilter> entry : listeners.entrySet()) {
-                    if (CapabilitySet.matches(endpoint, entry.getValue())) {
-                        doImportService(endpoint, entry.getKey());
+
+    @Override
+    public void childEvent(CuratorFramework curatorFramework, TreeCacheEvent event) throws Exception
+    {
+        switch (event.getType())
+        {
+            case NODE_ADDED:
+            {
+                if (event.getData().getData() != null)
+                {
+                    EndpointDescription endpoint = Utils.getEndpointDescription(new String(event.getData().getData()));
+                    remoteEndpoints.addCapability(endpoint);
+                    // Check existing listeners
+                    for (Map.Entry<ListenerInfo, SimpleFilter> entry : listeners.entrySet())
+                    {
+                        if (CapabilitySet.matches(endpoint, entry.getValue()))
+                        {
+                            doImportService(endpoint, entry.getKey());
+                        }
                     }
                 }
             }
-            break;
-            case NODE_UPDATED: {
-                EndpointDescription endpoint = Utils.getEndpointDescription(new String(event.getData().getData()));
-                Map<Long, ImportRegistration> registrations = importedServices.get(endpoint);
-                if (registrations != null) {
-                    for (ImportRegistration reg : registrations.values()) {
-                        reg.importedService.setProperties(new Hashtable<String, Object>(endpoint.getProperties()));
+                break;
+            case NODE_UPDATED:
+            {
+                if (event.getData().getData() != null)
+                {
+                    EndpointDescription endpoint = Utils.getEndpointDescription(new String(event.getData().getData()));
+                    Map<Long, ImportRegistration> registrations = importedServices.get(endpoint);
+                    if (registrations != null)
+                    {
+                        for (ImportRegistration reg : registrations.values())
+                        {
+                            reg.importedService.setProperties(new Hashtable<String, Object>(endpoint.getProperties()));
+                        }
                     }
                 }
             }
-            break;
-            case NODE_REMOVED: {
-                EndpointDescription endpoint = Utils.getEndpointDescription(new String(event.getData().getData()));
-                remoteEndpoints.removeCapability(endpoint);
-                Map<Long, ImportRegistration> registrations = importedServices.remove(endpoint);
-                if (registrations != null) {
-                    for (ImportRegistration reg : registrations.values()) {
-                        reg.getImportedService().unregister();
+                break;
+            case NODE_REMOVED:
+            {
+                if (event.getData().getData() != null)
+                {
+                    EndpointDescription endpoint = Utils.getEndpointDescription(new String(event.getData().getData()));
+                    remoteEndpoints.removeCapability(endpoint);
+                    Map<Long, ImportRegistration> registrations = importedServices.remove(endpoint);
+                    if (registrations != null)
+                    {
+                        for (ImportRegistration reg : registrations.values())
+                        {
+                            reg.getImportedService().unregister();
+                        }
                     }
                 }
             }
-            break;
+                break;
         }
     }
 
