@@ -64,7 +64,10 @@ import io.fabric8.dosgi.util.DefaultConfigurer;
                 @Property(name = RETRY_POLICY_MAX_RETRIES, label = "Maximum Retries Number", description = "The number of retries on failed retry-able ZooKeeper operations"/*, value = "${zookeeper.retry.max}"*/),
                 @Property(name = RETRY_POLICY_INTERVAL_MS, label = "Retry Interval", description = "The amount of time to wait between retries"/*, value = "${zookeeper.retry.interval}"*/),
                 @Property(name = CONNECTION_TIMEOUT, label = "Connection Timeout", description = "The amount of time to wait in ms for connection"/*, value = "${zookeeper.connection.timeout}"*/),
-                @Property(name = SESSION_TIMEOUT, label = "Session Timeout", description = "The amount of time to wait before timing out the session"/*, value = "${zookeeper.session.timeout}"*/)
+                @Property(name = SESSION_TIMEOUT, label = "Session Timeout", description = "The amount of time to wait before timing out the session"/*, value = "${zookeeper.session.timeout}"*/),
+                @Property(name = DOSGI_PORT, label = "dosgi port", description = "Server Port for DOSGi communication", value = "3000"),
+                @Property(name = DOSGI_BIND_HOST, label = "dosgi bind address", description = "Bind address for the DOSGi socket", value = "0.0.0.0"),
+                @Property(name = DOSGI_TIMEOUT, label = "dosgi timeout", description = "Connection timeout in ms", value = "300000"),
         }
 )
 public final class ManagedCuratorFramework implements ManagedCuratorFrameworkAvailable {
@@ -82,6 +85,8 @@ public final class ManagedCuratorFramework implements ManagedCuratorFrameworkAva
 
     private BundleContext bundleContext;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    private ManagerActivation managerActivation = new ManagerActivation();
 
     private AtomicReference<State> state = new AtomicReference<State>();
 
@@ -105,7 +110,7 @@ public final class ManagedCuratorFramework implements ManagedCuratorFrameworkAva
                 }
                 // then stop it
                 if (curator != null) {
-                    curator.getZookeeperClient().close();;
+                    curator.getZookeeperClient().close();
                 }
                 try {
                     Closeables.close(curator, true);
@@ -131,6 +136,7 @@ public final class ManagedCuratorFramework implements ManagedCuratorFrameworkAva
                     registration = bundleContext.registerService(CuratorFramework.class.getName(), curator, null);
                 }
             }
+            managerActivation.stateChanged(client, newState);
             for (ConnectionStateListener listener : connectionStateListeners) {
                 listener.stateChanged(client, newState);
             }
@@ -143,6 +149,7 @@ public final class ManagedCuratorFramework implements ManagedCuratorFrameworkAva
             closed.set(true);
             CuratorFramework curator = this.curator;
             if (curator != null) {
+                managerActivation.stateChanged(curator, ConnectionState.LOST);
                 for (ConnectionStateListener listener : connectionStateListeners) {
                     listener.stateChanged(curator, ConnectionState.LOST);
                 }
@@ -162,7 +169,7 @@ public final class ManagedCuratorFramework implements ManagedCuratorFrameworkAva
         this.bundleContext = bundleContext;
         CuratorConfig config = new CuratorConfig(configuration);
         configurer.configure(configuration, config);
-
+        managerActivation.activate(configuration);
         if (!Strings.isNullOrEmpty(config.getZookeeperUrl())) {
             State next = new State(config);
             if (state.compareAndSet(null, next)) {
@@ -177,7 +184,8 @@ public final class ManagedCuratorFramework implements ManagedCuratorFrameworkAva
         CuratorConfig config = new CuratorConfig(configuration);
         configurer.configure(configuration, this);
         configurer.configure(configuration, config);
-
+        managerActivation.onDisconnected();
+        managerActivation.activate(configuration);
         if (!Strings.isNullOrEmpty(config.getZookeeperUrl())) {
             State prev = state.get();
             CuratorConfig oldConfiguration = prev != null ? prev.configuration : null;
@@ -191,6 +199,13 @@ public final class ManagedCuratorFramework implements ManagedCuratorFrameworkAva
                 } else {
                     next.close();
                 }
+            }
+            else
+            {
+                // curator does not change so managerActivation needs to be refreshed manually
+                CuratorFramework curator = state.get().curator;
+                if(curator!=null && curator.getZookeeperClient().isConnected())
+                    managerActivation.stateChanged(curator, ConnectionState.CONNECTED);
             }
         }
     }
