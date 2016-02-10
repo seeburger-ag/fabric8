@@ -20,26 +20,24 @@ import java.util.Set;
 
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.framework.hooks.service.ListenerHook;
+import org.osgi.service.remoteserviceadmin.ImportReference;
 
-public class ImportRegistration {
+
+public class ImportRegistration implements org.osgi.service.remoteserviceadmin.ImportRegistration {
 
     final ServiceRegistration importedService;
-    final EndpointDescription importedEndpoint;
+    ImportReference importedReference;
     final Set<ListenerHook.ListenerInfo> listeners;
     boolean closed;
 
-    public ImportRegistration(ServiceRegistration importedService, EndpointDescription importedEndpoint) {
+    public ImportRegistration(ServiceRegistration importedService, ImportReference importedReference) {
         this.listeners = new HashSet<ListenerHook.ListenerInfo>();
         this.importedService = importedService;
-        this.importedEndpoint = importedEndpoint;
+        this.importedReference = importedReference;
     }
 
     public ServiceRegistration getImportedService() {
         return closed ? null : importedService;
-    }
-
-    public EndpointDescription getImportedEndpoint() {
-        return closed ? null : importedEndpoint;
     }
 
     public boolean addReference(ListenerHook.ListenerInfo listener) {
@@ -56,6 +54,18 @@ public class ImportRegistration {
 
     public void close() {
         closed = true;
+    }
+
+    @Override
+    public ImportReference getImportReference()
+    {
+        return closed ? null : importedReference;
+    }
+
+    @Override
+    public Throwable getException()
+    {
+        return null;
     }
 
 }

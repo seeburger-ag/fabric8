@@ -15,43 +15,8 @@
  */
 package io.fabric8.dosgi.impl;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.curator.framework.recipes.cache.TreeCache;
-import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
-import org.apache.curator.framework.recipes.cache.TreeCacheListener;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-
-import io.fabric8.dosgi.api.Dispatched;
-import io.fabric8.dosgi.api.SerializationStrategy;
-import io.fabric8.dosgi.capset.CapabilitySet;
-import io.fabric8.dosgi.capset.SimpleFilter;
-import io.fabric8.dosgi.io.ClientInvoker;
-import io.fabric8.dosgi.io.ServerInvoker;
-import io.fabric8.dosgi.tcp.ClientInvokerImpl;
-import io.fabric8.dosgi.tcp.ServerInvokerImpl;
-import io.fabric8.dosgi.util.AriesFrameworkUtil;
-import io.fabric8.dosgi.util.Utils;
-import io.fabric8.dosgi.util.UuidGenerator;
-
-import org.fusesource.hawtdispatch.Dispatch;
-import org.fusesource.hawtdispatch.DispatchQueue;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.Constants;
-import org.osgi.framework.ServiceEvent;
-import org.osgi.framework.ServiceFactory;
-import org.osgi.framework.ServiceListener;
-import org.osgi.framework.ServiceReference;
-import org.osgi.framework.ServiceRegistration;
-import org.osgi.framework.hooks.service.EventHook;
-import org.osgi.framework.hooks.service.FindHook;
-import org.osgi.framework.hooks.service.ListenerHook;
-import org.osgi.service.remoteserviceadmin.RemoteConstants;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static io.fabric8.dosgi.util.ZooKeeperUtils.*;
+import static org.osgi.service.remoteserviceadmin.RemoteConstants.*;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
@@ -70,15 +35,40 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
-import static io.fabric8.dosgi.util.ZooKeeperUtils.create;
-import static io.fabric8.dosgi.util.ZooKeeperUtils.delete;
-import static org.osgi.service.remoteserviceadmin.RemoteConstants.ENDPOINT_FRAMEWORK_UUID;
-import static org.osgi.service.remoteserviceadmin.RemoteConstants.ENDPOINT_ID;
-import static org.osgi.service.remoteserviceadmin.RemoteConstants.SERVICE_EXPORTED_CONFIGS;
-import static org.osgi.service.remoteserviceadmin.RemoteConstants.SERVICE_EXPORTED_INTENTS;
-import static org.osgi.service.remoteserviceadmin.RemoteConstants.SERVICE_EXPORTED_INTENTS_EXTRA;
-import static org.osgi.service.remoteserviceadmin.RemoteConstants.SERVICE_IMPORTED;
-import static org.osgi.service.remoteserviceadmin.RemoteConstants.SERVICE_IMPORTED_CONFIGS;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.TreeCache;
+import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
+import org.apache.curator.framework.recipes.cache.TreeCacheListener;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.fusesource.hawtdispatch.Dispatch;
+import org.fusesource.hawtdispatch.DispatchQueue;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
+import org.osgi.framework.ServiceEvent;
+import org.osgi.framework.ServiceFactory;
+import org.osgi.framework.ServiceListener;
+import org.osgi.framework.ServiceReference;
+import org.osgi.framework.ServiceRegistration;
+import org.osgi.framework.hooks.service.EventHook;
+import org.osgi.framework.hooks.service.FindHook;
+import org.osgi.framework.hooks.service.ListenerHook;
+import org.osgi.service.remoteserviceadmin.RemoteConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import io.fabric8.dosgi.api.Dispatched;
+import io.fabric8.dosgi.api.SerializationStrategy;
+import io.fabric8.dosgi.capset.CapabilitySet;
+import io.fabric8.dosgi.capset.SimpleFilter;
+import io.fabric8.dosgi.io.ClientInvoker;
+import io.fabric8.dosgi.io.ServerInvoker;
+import io.fabric8.dosgi.tcp.ClientInvokerImpl;
+import io.fabric8.dosgi.tcp.ServerInvokerImpl;
+import io.fabric8.dosgi.util.AriesFrameworkUtil;
+import io.fabric8.dosgi.util.Utils;
+import io.fabric8.dosgi.util.UuidGenerator;
 
 public class Manager implements ServiceListener, ListenerHook, EventHook, FindHook, TreeCacheListener, Dispatched {
 
@@ -341,8 +331,8 @@ public class Manager implements ServiceListener, ListenerHook, EventHook, FindHo
         try {
             ExportRegistration registration = exportedServices.remove(reference);
             if (registration != null) {
-                server.unregisterService(registration.getExportedEndpoint().getId());
-                delete(curator, registration.getZooKeeperNode());
+                server.unregisterService(registration.getExportReference().getExportedEndpoint().getId());
+                delete(curator, DOSGI_REGISTRY + "/" + registration.getExportReference().getExportedEndpoint().getId());
             }
         } catch (Exception e) {
             LOGGER.info("Error when unexporting endpoint", e);
@@ -397,7 +387,7 @@ public class Manager implements ServiceListener, ListenerHook, EventHook, FindHo
         // Publish in ZooKeeper
         final String nodePath = create(curator, DOSGI_REGISTRY + "/" + uuid, descStr, CreateMode.EPHEMERAL);
         // Return
-        return new ExportRegistration(reference, description, nodePath);
+        return new ExportRegistration(new ExportReferenceImpl(reference, description));
     }
 
     //
@@ -418,7 +408,7 @@ public class Manager implements ServiceListener, ListenerHook, EventHook, FindHo
                     new Factory(endpoint),
                     new Hashtable<String, Object>(endpoint.getProperties())
             );
-            reg = new ImportRegistration(registration, endpoint);
+            reg = new ImportRegistration(registration, new ImportReferenceImpl(registration.getReference(), endpoint));
             registrations.put(listener.getBundleContext().getBundle().getBundleId(), reg);
         }
         reg.addReference(listener);

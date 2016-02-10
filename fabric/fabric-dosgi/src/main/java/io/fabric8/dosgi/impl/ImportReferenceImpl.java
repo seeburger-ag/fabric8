@@ -1,5 +1,5 @@
 /**
- *  Copyright 2005-2014 Red Hat, Inc.
+ *  Copyright 2016 SEEBURGER AG
  *
  *  Red Hat licenses this file to you under the Apache License, version
  *  2.0 (the "License"); you may not use this file except in compliance
@@ -15,32 +15,40 @@
  */
 package io.fabric8.dosgi.impl;
 
-import org.osgi.service.remoteserviceadmin.ExportReference;
+import org.osgi.framework.ServiceReference;
+import org.osgi.service.remoteserviceadmin.EndpointDescription;
+import org.osgi.service.remoteserviceadmin.ImportReference;
 
-public class ExportRegistration implements org.osgi.service.remoteserviceadmin.ExportRegistration {
+public class ImportReferenceImpl implements ImportReference
+{
 
-    final ExportReference exportedReference;
-    boolean closed;
+    private ServiceReference reference;
+    private EndpointDescription description;
 
-    public ExportRegistration(ExportReference exportedReference) {
-        this.exportedReference = exportedReference;
+
+
+    public ImportReferenceImpl(ServiceReference reference, EndpointDescription description)
+    {
+        super();
+        this.reference = reference;
+        this.description = description;
     }
 
-
-    public void close() {
-        closed = true;
-    }
 
     @Override
-    public ExportReference getExportReference()
+    public ServiceReference getImportedService()
     {
-        return closed ? null : exportedReference;
+        return reference;
     }
 
+
     @Override
-    public Throwable getException()
+    public EndpointDescription getImportedEndpoint()
     {
-        return null;
+        return description;
     }
 
 }
+
+
+
