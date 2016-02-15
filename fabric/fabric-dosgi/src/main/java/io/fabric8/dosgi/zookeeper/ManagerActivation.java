@@ -1,9 +1,17 @@
-/*
- * ManagerActivation.java
+/**
+ *  Copyright 2016 SEEBURGER AG
  *
- * created at 08.02.2016 by utzig <j.utzig@seeburger.de>
+ *  SEEBURGER licenses this file to you under the Apache License, version
+ *  2.0 (the "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- * Copyright (c) SEEBURGER AG, Germany. All Rights Reserved.
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ *  implied.  See the License for the specific language governing
+ *  permissions and limitations under the License.
  */
 package io.fabric8.dosgi.zookeeper;
 
@@ -77,7 +85,7 @@ public class ManagerActivation implements ConnectionStateListener
         {
             String port = (String)configuration.getOrDefault(DOSGI_PORT, "3000");
             String bindHost = (String)configuration.getOrDefault(DOSGI_BIND_HOST, "0.0.0.0");
-            timeout = Long.parseLong((String)configuration.getOrDefault(DOSGI_TIMEOUT, "300000")); //5 minutes
+            timeout = Long.parseLong((String)configuration.getOrDefault(DOSGI_TIMEOUT, "10000")); //10 seconds
             uri = "tcp://"+bindHost+":"+port;
         }
         catch (Exception e)

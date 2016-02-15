@@ -17,17 +17,20 @@ package io.fabric8.dosgi.impl;
 
 import org.osgi.service.remoteserviceadmin.ExportReference;
 
-public class ExportRegistration implements org.osgi.service.remoteserviceadmin.ExportRegistration {
+public class ExportRegistrationImpl implements org.osgi.service.remoteserviceadmin.ExportRegistration {
 
     final ExportReference exportedReference;
     boolean closed;
+    private RemoteServiceAdminImpl admin;
 
-    public ExportRegistration(ExportReference exportedReference) {
+    public ExportRegistrationImpl(ExportReference exportedReference, RemoteServiceAdminImpl admin) {
         this.exportedReference = exportedReference;
+        this.admin = admin;
     }
 
 
     public void close() {
+        admin.unExportService(this.getExportReference().getExportedService());
         closed = true;
     }
 

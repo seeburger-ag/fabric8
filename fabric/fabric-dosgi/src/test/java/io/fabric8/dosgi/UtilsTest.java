@@ -15,19 +15,20 @@
  */
 package io.fabric8.dosgi;
 
+import static org.junit.Assert.*;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import io.fabric8.dosgi.impl.EndpointDescription;
-import io.fabric8.dosgi.impl.Manager;
-import io.fabric8.dosgi.util.Utils;
 import org.junit.Test;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.Constants;
+import org.osgi.service.remoteserviceadmin.EndpointDescription;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import io.fabric8.dosgi.impl.Manager;
+import io.fabric8.dosgi.impl.RemoteServiceAdminImpl;
+import io.fabric8.dosgi.util.Utils;
 
 public class UtilsTest {
 
@@ -39,7 +40,7 @@ public class UtilsTest {
         props.put("protocols", new String[]{"foo", "bar"});
         props.put("ints", new int[]{1, 2, 3});
         props.put("endpoint.id", "identifier");
-        props.put("service.imported.configs", Collections.<Object>singletonList(Manager.CONFIG));;
+        props.put("service.imported.configs", Collections.<Object>singletonList(RemoteServiceAdminImpl.CONFIG));
         EndpointDescription endpoint1 = new EndpointDescription(props);
 
         String xml = Utils.getEndpointDescriptionXML(endpoint1);

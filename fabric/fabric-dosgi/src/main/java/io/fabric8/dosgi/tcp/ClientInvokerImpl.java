@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 
 public class ClientInvokerImpl implements ClientInvoker, Dispatched {
 
-    public static final long DEFAULT_TIMEOUT = TimeUnit.MINUTES.toMillis(5);
+    public static final long DEFAULT_TIMEOUT = TimeUnit.SECONDS.toMillis(20);
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(ClientInvokerImpl.class);
 

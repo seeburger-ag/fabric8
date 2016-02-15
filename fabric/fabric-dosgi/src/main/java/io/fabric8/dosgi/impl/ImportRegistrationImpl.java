@@ -23,36 +23,29 @@ import org.osgi.framework.hooks.service.ListenerHook;
 import org.osgi.service.remoteserviceadmin.ImportReference;
 
 
-public class ImportRegistration implements org.osgi.service.remoteserviceadmin.ImportRegistration {
+public class ImportRegistrationImpl implements org.osgi.service.remoteserviceadmin.ImportRegistration {
 
     final ServiceRegistration importedService;
     ImportReference importedReference;
     final Set<ListenerHook.ListenerInfo> listeners;
     boolean closed;
+    private RemoteServiceAdminImpl admin;
 
-    public ImportRegistration(ServiceRegistration importedService, ImportReference importedReference) {
+    public ImportRegistrationImpl(ServiceRegistration importedService, ImportReference importedReference, RemoteServiceAdminImpl admin) {
         this.listeners = new HashSet<ListenerHook.ListenerInfo>();
         this.importedService = importedService;
         this.importedReference = importedReference;
+        this.admin = admin;
     }
 
     public ServiceRegistration getImportedService() {
         return closed ? null : importedService;
     }
 
-    public boolean addReference(ListenerHook.ListenerInfo listener) {
-        return this.listeners.add(listener);
-    }
-
-    public boolean removeReference(ListenerHook.ListenerInfo listener) {
-        return this.listeners.remove(listener);
-    }
-
-    public boolean hasReferences() {
-        return !this.listeners.isEmpty();
-    }
 
     public void close() {
+        admin.unImportService(this);
+        importedService.unregister();
         closed = true;
     }
 

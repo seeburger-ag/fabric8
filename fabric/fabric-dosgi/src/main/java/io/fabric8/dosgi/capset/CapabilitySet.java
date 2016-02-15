@@ -30,7 +30,9 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class CapabilitySet<C extends Capability>
+import org.osgi.service.remoteserviceadmin.EndpointDescription;
+
+public class CapabilitySet<C extends EndpointDescription>
 {
     private final Map<String, Map<Object, Set<C>>> m_indices;
     private final Set<C> m_capSet = new HashSet<C>();
@@ -67,7 +69,7 @@ public class CapabilitySet<C extends Capability>
         // Index capability.
         for (Entry<String, Map<Object, Set<C>>> entry : m_indices.entrySet())
         {
-            Attribute capAttr = cap.getAttribute(entry.getKey());
+            Attribute capAttr = getAttribute(cap,entry.getKey());
             if (capAttr != null)
             {
                 Object capValue = capAttr.getValue();
@@ -125,7 +127,7 @@ public class CapabilitySet<C extends Capability>
         {
             for (Entry<String, Map<Object, Set<C>>> entry : m_indices.entrySet())
             {
-                Attribute capAttr = cap.getAttribute(entry.getKey());
+                Attribute capAttr = getAttribute(cap, entry.getKey());
                 if (capAttr != null)
                 {
                     Object capValue = capAttr.getValue();
@@ -239,7 +241,7 @@ public class CapabilitySet<C extends Capability>
                 for (Iterator<C> it = caps.iterator(); it.hasNext(); )
                 {
                     C cap = it.next();
-                    Attribute attr = cap.getAttribute(sf.getName());
+                    Attribute attr = getAttribute(cap,sf.getName());
                     if (attr != null)
                     {
                         Object lhs = attr.getValue();
@@ -530,5 +532,10 @@ public class CapabilitySet<C extends Capability>
             list.add(Array.get(array, i));
         }
         return list;
+    }
+
+    public Attribute getAttribute(EndpointDescription description, String name) {
+        Object val = description.getProperties().get(name);
+        return val != null ? new Attribute( name, val ) : null;
     }
 }
