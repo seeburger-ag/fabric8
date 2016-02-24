@@ -38,15 +38,14 @@ public class HawtClientRemoteService extends AbstractClientService
     {
         if (call instanceof HawtRemoteCalls)
         {
+
             HawtRemoteCalls theCall = (HawtRemoteCalls)call;
             Method method = theCall.getJavaMethod();
-            String id = "x"; //FIXME: where is the endpoint id? (String)getRegistration().getReference().getID().getName()
-//            id = getRemoteServiceID().getName();
-            String uri = (String)getRegistration().getProperty("ecf.hawt.address");
-            if(uri==null)
-                uri = "tcp://localhost:9001"; //FIXME: this is a workaround because the property doesn't get get transmitted properly
-//            id = (String)getRegistration().getProperty("some.id");
-            InvocationHandler realHandler = getClientContainer().getInvoker().getProxy(uri,id, method.getDeclaringClass().getClassLoader());
+
+            String uri = getClientContainer().getConnectedID().getName();
+            String service = String.valueOf(getRemoteServiceID().getContainerRelativeID());
+
+            InvocationHandler realHandler = getClientContainer().getInvoker().getProxy(uri,service, method.getDeclaringClass().getClassLoader());
             try
             {
                 return realHandler.invoke(null, method, call.getParameters());

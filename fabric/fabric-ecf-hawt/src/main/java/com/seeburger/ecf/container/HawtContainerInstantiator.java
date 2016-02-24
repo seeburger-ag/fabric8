@@ -35,16 +35,19 @@ public class HawtContainerInstantiator extends RemoteServiceContainerInstantiato
 
     protected static final String[] intents = new String[]{"ecf.hawt",HawtRemoteServiceDistributionProvider.HAWT_SERVER_CONFIG_NAME,HawtRemoteServiceDistributionProviderClient.SERVER_PROVIDER_NAME,HawtRemoteServiceDistributionProviderClient.CLIENT_PROVIDER_NAME};
 
+    private Map<String, ? > configuration;
 
-    protected HawtContainerInstantiator(String serverConfigTypeName)
+
+    protected HawtContainerInstantiator(String serverConfigTypeName, Map<String, ?> properties)
     {
         this.exporterConfigs.add(serverConfigTypeName);
+        this.configuration = properties;
     }
 
 
-    protected HawtContainerInstantiator(String serverConfigTypeName, String clientConfigTypeName)
+    protected HawtContainerInstantiator(String serverConfigTypeName, String clientConfigTypeName, Map<String, ?> properties)
     {
-        this(serverConfigTypeName);
+        this(serverConfigTypeName, properties);
         this.exporterConfigToImporterConfigs.put(serverConfigTypeName, Arrays.asList(new String[]{clientConfigTypeName}));
     }
 
@@ -68,7 +71,7 @@ public class HawtContainerInstantiator extends RemoteServiceContainerInstantiato
     public IContainer createInstance(ContainerTypeDescription type, Map<String, ? > options) throws ContainerCreateException
     {
         if(type.isServer())
-            return new HawtServerContainer(options);
+            return new HawtServerContainer(configuration);
         return new HawtClientContainer();
     }
 }

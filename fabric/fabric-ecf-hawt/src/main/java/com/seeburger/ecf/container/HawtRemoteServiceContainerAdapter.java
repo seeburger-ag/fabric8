@@ -16,19 +16,15 @@
 package com.seeburger.ecf.container;
 
 
-import java.net.Inet4Address;
-import java.net.UnknownHostException;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 import org.eclipse.ecf.remoteservice.IExtendedRemoteServiceRegistration;
 import org.eclipse.ecf.remoteservice.IRegistrationListener;
 import org.eclipse.ecf.remoteservice.RemoteServiceContainerAdapterImpl;
 import org.eclipse.ecf.remoteservice.RemoteServiceRegistrationImpl;
 import org.eclipse.ecf.remoteservice.RemoteServiceRegistryImpl;
-import org.eclipse.equinox.concurrent.future.IExecutor;
 
 import com.seeburger.ecf.io.ServerInvoker;
 import com.seeburger.ecf.io.ServerInvoker.ServiceFactory;
@@ -67,7 +63,7 @@ public class HawtRemoteServiceContainerAdapter extends RemoteServiceContainerAda
             {
                 public void unregister(RemoteServiceRegistrationImpl registration)
                 {
-                    invoker.unregisterService(registration.getReference().getID().toExternalForm());
+                    invoker.unregisterService(registration.getID().getName());
                     handleServiceUnregister(registration);
                 }
             });
@@ -84,22 +80,9 @@ public class HawtRemoteServiceContainerAdapter extends RemoteServiceContainerAda
 
                 }
             };
-//                String id = getID().getName(); //FIXME: where is the endpoint id?
-//            String id = UUID.randomUUID().toString();
-            String id = "x";
-            try
-            {
-                props.put("some.id", id); //workaround until I figure out where to get the endpoint id from
-                props.put("ecf.hawt.address", "tcp://"+Inet4Address.getLocalHost().getCanonicalHostName()+":9001");
-            }
-            catch (UnknownHostException e)
-            {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
 
             super.publish(registry, svc, clzzes, props);
-            invoker.registerService(id, serviceFactory, svc.getClass().getClassLoader());
+            invoker.registerService(String.valueOf(getID().getContainerRelativeID()), serviceFactory, svc.getClass().getClassLoader());
         }
 
         @Override

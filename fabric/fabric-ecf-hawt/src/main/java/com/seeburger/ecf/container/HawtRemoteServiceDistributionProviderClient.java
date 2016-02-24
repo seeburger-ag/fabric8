@@ -27,7 +27,7 @@ import org.eclipse.ecf.remoteservice.provider.IRemoteServiceDistributionProvider
 import org.eclipse.ecf.remoteservice.provider.RemoteServiceDistributionProvider;
 
 
-@Component(enabled=true,immediate=true)
+@Component(enabled=true,immediate=false)
 @Service(value=IRemoteServiceDistributionProvider.class)
 public class HawtRemoteServiceDistributionProviderClient extends RemoteServiceDistributionProvider
 {
@@ -50,7 +50,7 @@ public class HawtRemoteServiceDistributionProviderClient extends RemoteServiceDi
     {
         setName(CLIENT_PROVIDER_NAME);
         setServer(false);
-        setInstantiator(new HawtContainerInstantiator(SERVER_PROVIDER_NAME,CLIENT_PROVIDER_NAME));
+        setInstantiator(new HawtContainerInstantiator(SERVER_PROVIDER_NAME,CLIENT_PROVIDER_NAME,properties));
         setDescription("Fabric Hawt.io Provider");
         this.properties = properties;
     }

@@ -45,7 +45,7 @@ public class HawtServerContainer extends AbstractContainer
     public HawtServerContainer(Map<String, ? > options) {
 
         // Create serverID
-        this.serverId = HawtNamespace.INSTANCE.createInstance(new Object[] { URI.create("uuid:" + java.util.UUID.randomUUID().toString()) });
+        this.serverId = HawtNamespace.INSTANCE.createInstance(new Object[] { URI.create("tcp://"+options.get("host")+":"+options.get("port"))});
         invoker = createInvoker(options);
         remoteAdapter = new HawtRemoteServiceContainerAdapter(this, invoker);
     }
@@ -54,7 +54,7 @@ public class HawtServerContainer extends AbstractContainer
     {
         try
         {
-            invoker = new ServerInvokerImpl("tcp://0.0.0.0:9001", Dispatch.createQueue(), new ConcurrentHashMap<>());
+            invoker = new ServerInvokerImpl("tcp://0.0.0.0:"+options.get("port"), Dispatch.createQueue(), new ConcurrentHashMap<>());
             invoker.start();
         }
         catch (Exception e)

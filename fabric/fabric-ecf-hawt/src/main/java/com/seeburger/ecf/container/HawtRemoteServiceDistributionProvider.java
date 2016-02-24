@@ -16,6 +16,8 @@
 package com.seeburger.ecf.container;
 
 
+import java.net.Inet4Address;
+import java.net.UnknownHostException;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -23,6 +25,8 @@ import java.util.Map;
 
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.Properties;
+import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Service;
 import org.eclipse.ecf.core.ContainerTypeDescription;
 import org.eclipse.ecf.remoteservice.provider.IRemoteServiceDistributionProvider;
@@ -31,8 +35,12 @@ import org.eclipse.ecf.remoteservice.provider.RemoteServiceDistributionProvider;
 import com.seeburger.ecf.HawtNamespace;
 
 
-@Component(enabled=true,immediate=true)
+@Component(enabled=true,immediate=false)
 @Service(value=IRemoteServiceDistributionProvider.class)
+@Properties({
+    @Property(name="host"),
+    @Property(name="port", value = "9001")
+})
 public class HawtRemoteServiceDistributionProvider extends RemoteServiceDistributionProvider
 {
 
@@ -53,12 +61,23 @@ public class HawtRemoteServiceDistributionProvider extends RemoteServiceDistribu
         setName(HawtRemoteServiceDistributionProviderClient.SERVER_PROVIDER_NAME);
         setServer(true);
         setHidden(false);
+        Map<String, Object> settings = new HashMap<>(properties);
+            try
+            {
+                if(!settings.containsKey("host"))
+                    settings.put("host", Inet4Address.getLocalHost().getCanonicalHostName());
+            }
+            catch (UnknownHostException e)
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         setNamespace(HawtNamespace.INSTANCE);
 //        ContainerTypeDescription typeDescription = getContainerTypeDescription();
 //        System.out.println(typeDescription);
-        setInstantiator(new HawtContainerInstantiator(HawtRemoteServiceDistributionProviderClient.SERVER_PROVIDER_NAME));
+        setInstantiator(new HawtContainerInstantiator(HawtRemoteServiceDistributionProviderClient.SERVER_PROVIDER_NAME,settings));
         setDescription("Fabric Hawt.io Provider");
-        this.properties = properties;
+        this.properties = settings;
 
 
     }

@@ -16,7 +16,12 @@
 package com.seeburger.ecf.container;
 
 import java.net.URI;
+import java.util.Dictionary;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.eclipse.ecf.core.ContainerConnectException;
 import org.eclipse.ecf.core.identity.ID;
@@ -26,10 +31,12 @@ import org.eclipse.ecf.remoteservice.IRemoteService;
 import org.eclipse.ecf.remoteservice.IRemoteServiceCallPolicy;
 import org.eclipse.ecf.remoteservice.IRemoteServiceReference;
 import org.eclipse.ecf.remoteservice.IRemoteServiceRegistration;
+import org.eclipse.ecf.remoteservice.RemoteServiceID;
 import org.eclipse.ecf.remoteservice.client.AbstractClientContainer;
 import org.eclipse.ecf.remoteservice.client.IRemoteCallable;
 import org.eclipse.ecf.remoteservice.client.RemoteCallableFactory;
 import org.eclipse.ecf.remoteservice.client.RemoteServiceClientRegistration;
+import org.eclipse.ecf.remoteservice.client.RemoteServiceClientRegistry;
 import org.fusesource.hawtdispatch.Dispatch;
 import org.osgi.framework.InvalidSyntaxException;
 import org.slf4j.Logger;
@@ -67,7 +74,13 @@ public class HawtClientContainer extends AbstractClientContainer
             throws InvalidSyntaxException, ContainerConnectException {
         IRemoteServiceReference[] refs = super.getRemoteServiceReferences(target, idFilter, clazz, filter);
         if (refs == null) {
-            IRemoteServiceRegistration registration = registerCallables(new String[] { clazz }, new IRemoteCallable[][] { { callable } }, null);
+            Properties props = new Properties();
+            Matcher matcher = Pattern.compile("\\((.*?)=(.*?)\\)").matcher(filter.substring(2));
+            while(matcher.find())
+            {
+                props.put(matcher.group(1), matcher.group(2));
+            }
+            IRemoteServiceRegistration registration = registerCallables(new String[] { clazz }, new IRemoteCallable[][] { { callable } }, props);
             return new IRemoteServiceReference[]{registration.getReference()};
 //            refs = super.getRemoteServiceReferences(target, idFilter, clazz, filter);
         }
@@ -94,6 +107,12 @@ public class HawtClientContainer extends AbstractClientContainer
         return HawtNamespace.INSTANCE;
     }
 
+
+    protected RemoteServiceClientRegistration createRestServiceRegistration(String[] clazzes, IRemoteCallable[][] callables, @SuppressWarnings("rawtypes") Dictionary properties)
+    {
+        return new HawtClientRemoteServiceRegistration(clazzes, callables, properties, registry);
+    }
+
     @Override
     protected IRemoteService createRemoteService(RemoteServiceClientRegistration arg0)
     {
@@ -116,6 +135,19 @@ public class HawtClientContainer extends AbstractClientContainer
     {
         invoker.stop();
         super.dispose();
+    }
+
+    class HawtClientRemoteServiceRegistration extends RemoteServiceClientRegistration {
+
+        public HawtClientRemoteServiceRegistration(String[] classNames,
+                IRemoteCallable[][] restCalls, @SuppressWarnings("rawtypes") Dictionary properties, RemoteServiceClientRegistry registry) {
+            super(getConnectNamespace(), classNames, restCalls, properties, registry);
+            this.containerId = getConnectedID();
+            this.serviceID = new RemoteServiceID(getConnectNamespace(), this.containerId, Long.parseLong((String)properties.get(org.eclipse.ecf.remoteservice.Constants.SERVICE_ID)));
+        }
+        public IRemoteCallable lookupCallable(IRemoteCall remoteCall) {
+             return callable;
+        }
     }
 
 }
