@@ -18,6 +18,7 @@ package com.seeburger.cxf.tcp;
 import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -32,6 +33,7 @@ import org.fusesource.hawtbuf.DataByteArrayInputStream;
 import org.fusesource.hawtbuf.DataByteArrayOutputStream;
 import org.fusesource.hawtbuf.UTF8Buffer;
 import org.fusesource.hawtdispatch.DispatchQueue;
+import org.osgi.framework.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -293,7 +295,14 @@ public class ClientInvokerImpl implements ClientInvoker, Dispatched {
         }
 
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-            return request(this, address, service, classLoader, method, args);
+            try
+            {
+                return request(this, address, service, classLoader, method, args);
+            }
+            catch (UndeclaredThrowableException e)
+            {
+                throw new ServiceException(e.getCause().getMessage(), e.getCause());
+            }
         }
 
     }

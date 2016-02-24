@@ -43,6 +43,8 @@ import com.seeburger.cxf.tcp.ServerInvokerImpl;
 @Service
 public class HawtConfigurationTypeHandler implements ConfigurationTypeHandler {
 
+    private static final String HAWT_ADDRESS = "hawt.address";
+
     private static final Logger LOG = LoggerFactory.getLogger(HawtConfigurationTypeHandler.class);
 
     private static final String FABRIC_ADDRESS = "fabric.address";
@@ -58,9 +60,10 @@ public class HawtConfigurationTypeHandler implements ConfigurationTypeHandler {
         this.bundleContext = FrameworkUtil.getBundle(getClass()).getBundleContext();
         this.queue = Dispatch.createQueue();
         this.serializationStrategies = new ConcurrentHashMap<String, SerializationStrategy>();
-        Random r = new Random();
-        int port = r.nextInt(55000);
-        port+=10000;
+//        Random r = new Random();
+//        int port = r.nextInt(55000);
+//        port+=10000;
+        int port = Integer.parseInt(System.getProperty("hawt.port"));
 
         try {
             String host = Inet4Address.getLocalHost().getCanonicalHostName();
@@ -101,14 +104,21 @@ public class HawtConfigurationTypeHandler implements ConfigurationTypeHandler {
                     return serviceBean;
                 }
             };
-            server.registerService(endpointProps.get(RemoteConstants.ENDPOINT_ID).toString(), factory, serviceBean.getClass().getClassLoader());
+            String callID = (String) endpointProps.get(RemoteConstants.ENDPOINT_ID);
+            if(endpointProps.containsKey(HAWT_ADDRESS))
+                callID = (String) endpointProps.get(HAWT_ADDRESS);
+
+            server.registerService(callID, factory, serviceBean.getClass().getClassLoader());
             return new ExportResult(endpointProps, new ServerWrapper(server,serviceBean,endpointProps));
     }
 
     @Override
     public Object createProxy(ServiceReference serviceReference, BundleContext dswContext, BundleContext callingContext,
             Class<?> iClass, EndpointDescription endpoint) throws IntentUnsatisfiedException {
-        InvocationHandler invocationHandler = client.getProxy((String) endpoint.getProperties().get(FABRIC_ADDRESS), endpoint.getProperties().get(RemoteConstants.ENDPOINT_ID).toString(), iClass.getClassLoader());
+        String callID = (String) endpoint.getProperties().get(RemoteConstants.ENDPOINT_ID);
+        if(endpoint.getProperties().containsKey(HAWT_ADDRESS))
+            callID = (String) endpoint.getProperties().get(HAWT_ADDRESS);
+        InvocationHandler invocationHandler = client.getProxy((String) endpoint.getProperties().get(FABRIC_ADDRESS), callID, iClass.getClassLoader());
         return Proxy.newProxyInstance(iClass.getClassLoader(), new Class[] {iClass},invocationHandler);
     }
 
